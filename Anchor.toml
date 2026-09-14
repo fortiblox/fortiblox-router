@@ -1,0 +1,21 @@
+[toolchain]
+anchor_version = "1.1.2"
+
+[features]
+resolution = true
+
+[programs.localnet]
+fortiblox_router = "3geAsZiNaWDuTVtTbdWVQRitd55jY4UoWeeBmJFTJZmE"
+
+# X1 mainnet is a custom cluster; pass it explicitly on deploy:
+#   anchor deploy --provider.cluster https://rpc.mainnet.x1.xyz
+[programs.mainnet]
+fortiblox_router = "3geAsZiNaWDuTVtTbdWVQRitd55jY4UoWeeBmJFTJZmE"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+# LiteSVM-based tests: no local validator needed.
+test = "npx ts-mocha -p ./tsconfig.json -t 120000 tests/**/*.test.ts"

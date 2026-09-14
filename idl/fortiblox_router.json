@@ -1,0 +1,1734 @@
+{
+  "address": "3geAsZiNaWDuTVtTbdWVQRitd55jY4UoWeeBmJFTJZmE",
+  "metadata": {
+    "name": "fortiblox_router",
+    "version": "0.4.3",
+    "spec": "0.1.0",
+    "description": "FortiBlox Router: non-custodial atomic multi-hop route executor on X1",
+    "repository": "https://github.com/fortiblox/fortiblox-router"
+  },
+  "instructions": [
+    {
+      "name": "commit_threshold_change",
+      "docs": [
+        "Step 2 of the bounded threshold tuning. PERMISSIONLESS crank once the",
+        "timelock has elapsed \u2014 it can only apply an already-staged, already-",
+        "floored, already-rate-limited change."
+      ],
+      "discriminator": [
+        116,
+        159,
+        177,
+        193,
+        246,
+        255,
+        192,
+        251
+      ],
+      "accounts": [
+        {
+          "name": "fee_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "finalize_tier_writers",
+      "docs": [
+        "Deferred WRITE-ONCE of the tier writer-side identity. Authority-gated and",
+        "valid ONLY while `version == 1` AND all four identity fields are zero;",
+        "writes them and bumps `version = 2`, after which NO mutation path exists",
+        "(spec R4: a repointable mint/program under a captured authority would pass",
+        "every downstream holder/locker check \u2014 so this is one-shot by design)."
+      ],
+      "discriminator": [
+        141,
+        124,
+        146,
+        96,
+        171,
+        5,
+        194,
+        69
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "fee_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "forti_mint",
+          "type": "pubkey"
+        },
+        {
+          "name": "sforti_mint",
+          "type": "pubkey"
+        },
+        {
+          "name": "sforti_program",
+          "type": "pubkey"
+        },
+        {
+          "name": "ve_program",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "init_fee_config",
+      "docs": [
+        "One-time creation of the single global `fee_config` PDA.",
+        "",
+        "GATED to the program's UPGRADE AUTHORITY (CC-1 pattern): `program` pins",
+        "this program, `program_data` must be its ProgramData and its",
+        "`upgrade_authority_address` must be the `payer` signer \u2014 so nobody can",
+        "front-run the deploy-to-init window and squat the PDA / set a rogue",
+        "`authority`. Re-init is impossible (Anchor `init` reverts if the PDA",
+        "exists). Writes the IMMUTABLE ladder `tier_bps = [25,15,5]` (asserted,",
+        "never a parameter; NO instruction can ever mutate it), `streak_n`, the",
+        "floored thresholds, the governance `authority` (the multisig), and",
+        "`version = 1`. The writer-side identity (`forti_mint`/`sforti_mint`/",
+        "`sforti_program`/`ve_program`) is left ZERO: those programs are not",
+        "deployed yet and are written once, later, by `finalize_tier_writers`."
+      ],
+      "discriminator": [
+        212,
+        138,
+        200,
+        114,
+        73,
+        176,
+        7,
+        197
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "fee_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program",
+          "docs": [
+            "This program's own account; its `programdata_address` must be",
+            "`program_data` (implicitly: it is a BPFUpgradeable program)."
+          ],
+          "address": "3geAsZiNaWDuTVtTbdWVQRitd55jY4UoWeeBmJFTJZmE"
+        },
+        {
+          "name": "program_data",
+          "docs": [
+            "The program's ProgramData; its upgrade authority MUST be `payer`."
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "holder_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "locker_threshold",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "migrate_fee_authority",
+      "docs": [
+        "Hand the `fee_config` governance `authority` to a new key (e.g. multisig \u2192",
+        "governance-execute PDA at activation). CURRENT-authority-gated; the sole",
+        "mutator of `authority`. Plain reassignment (no timelock): the tunable",
+        "thresholds stay floored + rate-limited + timelocked regardless of who",
+        "holds the keys, and the immutable block is untouched."
+      ],
+      "discriminator": [
+        160,
+        150,
+        41,
+        140,
+        93,
+        147,
+        122,
+        242
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "fee_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "propose_threshold_change",
+      "docs": [
+        "Step 1 of the bounded threshold tuning (spec \u00a74.3, Surface 6.3). Only the",
+        "governance `authority` may propose; new values must clear the compile-time",
+        "FLOORS (governance can never dust the thresholds to make 15/5 universal);",
+        "a RATE-LIMIT (since the last committed change) bounds frequency; the",
+        "staged change carries a TIMELOCK the commit must wait out. `tier_bps` and",
+        "the identity block have NO propose/commit path."
+      ],
+      "discriminator": [
+        181,
+        148,
+        51,
+        200,
+        229,
+        192,
+        251,
+        36
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "fee_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "new_holder",
+          "type": "u64"
+        },
+        {
+          "name": "new_locker",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "route_v2",
+      "docs": [
+        "v2 \u2014 execute a mixed route of XDEX cp-swap and Degen bonding-curve legs",
+        "in ONE atomic instruction, then take the unbypassable protocol fee and",
+        "enforce the user's net minimum receipt.",
+        "",
+        "`legs[i]` is the kind of hop i: `0`=XDEX, `1`=Degen buy, `2`=Degen sell.",
+        "`remaining_accounts` is the concatenation of each leg's account window in",
+        "order (XDEX=13, Degen buy=28, Degen sell=16). Hop 0 trades",
+        "`initial_amount_in`; every later hop trades the full value it received.",
+        "The XNT hub between a Degen leg (native) and an XDEX leg (WXNT) is bridged",
+        "by the router itself (wrap/unwrap); a route that ends in native (Degen",
+        "sell) is normalized to WXNT so the fee + min-out use the same proven path.",
+        "`minimum_amount_out` is the floor on what the user keeps AFTER the fee \u2014",
+        "the ONLY slippage protection Degen legs have (they carry no pool min-out).",
+        "",
+        "v0.4.2 pause coverage (fixes the B-M2 bypass, security audit Medium",
+        "finding): `fee_config` is a MANDATORY, FIXED 9th account (see",
+        "`RouteV2`) \u2014 the pause gate (`require_not_paused`, `Paused` 6042) runs",
+        "BEFORE the engine, unconditionally, for every caller. There is no wire",
+        "shape that reaches the engine without it; a caller on the old 8-account",
+        "wire gets Anchor `AccountNotEnoughKeys` (3005), never a silent",
+        "uncovered swap. (v0.3.1 originally made this account an OPTIONAL",
+        "trailing `remaining_account` for backward compatibility \u2014 that was the",
+        "bypass: any caller that simply omitted it kept trading through a",
+        "guardian pause. `route_v2_snipe` / `route_v2_delegated` / `route_v3`",
+        "were unaffected \u2014 their `fee_config` was already mandatory.)"
+      ],
+      "discriminator": [
+        187,
+        100,
+        250,
+        204,
+        49,
+        196,
+        175,
+        20
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "docs": [
+            "Route authority + rent payer (fee-ATA + WXNT-ATA idempotent creates)."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "fee_destination",
+          "docs": [
+            "final_out_token_program); the mandatory fee is transferred here."
+          ],
+          "writable": true
+        },
+        {
+          "name": "fee_wallet",
+          "address": "FdQ2FmAydXBe87Nm7w4MjksRqTUjahPaqjj7mVshKvNa"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "xdex_program",
+          "address": "sEsYH97wqmfnkzHedjNcw3zyJdPvUmsa9AixhS4b4fN"
+        },
+        {
+          "name": "degen_program",
+          "address": "degenDXVPhS7vgu3hcdzGA7T6dfCe6qTYyVM7npP3pc"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "fee_config",
+          "docs": [
+            "pinned by constant address (Anchor 2012 for anything else);",
+            "`require_not_paused` re-checks address, then owner (2004), then reads",
+            "only the `paused` byte (225). MANDATORY: a caller that omits this",
+            "account gets Anchor `AccountNotEnoughKeys` (3005), never a swap that",
+            "silently bypasses the guardian's pause switch."
+          ],
+          "address": "6kfdAmUEPCQbRWpVchV6wS3K8wtd6vKgSEYvkKPAUoHC"
+        }
+      ],
+      "args": [
+        {
+          "name": "legs",
+          "type": "bytes"
+        },
+        {
+          "name": "initial_amount_in",
+          "type": "u64"
+        },
+        {
+          "name": "minimum_amount_out",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "route_v2_delegated",
+      "docs": [
+        "v0.3.0 \u2014 execute an XDEX-only route ON BEHALF of `user`, signed by an",
+        "SPL DELEGATE (`delegate_authority`) instead of the user \u2014 the",
+        "copy-trade / automation surface (Honeybadger CopyTradeService).",
+        "",
+        "Why a vault (the fee-authority catch, #450 comment 2): a delegate only",
+        "has authority over the user's INPUT ATA, never over the OUTPUT ATA, so",
+        "the manual fee `TransferChecked` `route_v2` makes out of the user's",
+        "output ATA cannot be signed by anyone in a delegated tx. Instead every",
+        "hop's OUTPUT is the router's transient vault ATA for that mint",
+        "(`ATA(mint, vault_authority)`); hop 0 is paid from `user_input_ata` with",
+        "the delegate as the XDEX `payer` (live-verified: XDEX `swap_base_input`",
+        "moves the input with `transfer_checked(authority = payer)` and has NO",
+        "owner constraint on either token account \u2014 the SPL program accepts the",
+        "delegate and debits `delegated_amount`); every later hop is paid from",
+        "the previous hop's vault ATA with the PDA signing. At the end the PDA",
+        "signs `fee` \u2192 pinned fee sink and `gross \u2212 fee` \u2192 the USER's canonical",
+        "output ATA (`user_output_ata`, derived and asserted \u2014 the delegate",
+        "cannot redirect proceeds), then the final vault MUST read 0",
+        "(`VaultNotDrained`). Any balance that already sat in the final vault",
+        "before the route (only possible via a third-party donation \u2014 the router",
+        "never leaves value behind) is swept to the fee sink first, so a griefer",
+        "cannot brick a mint by dusting its vault.",
+        "",
+        "Delegation proof (asserted BEFORE any CPI): `user_input_ata.owner ==",
+        "user`, `user_input_ata.delegate == Some(delegate_authority)`,",
+        "`delegated_amount >= initial_amount_in`. The delegate can therefore move",
+        "at most what the user explicitly approved, and only INTO a swap whose",
+        "output goes to the user; it can never receive value itself.",
+        "",
+        "Transfer-fee mints (Token-2022 `TransferFeeConfig`) are rejected as an",
+        "output of ANY hop (`TransferFeeUnsupported`): the vault -> user forward",
+        "would pay the mint's fee after the min-out check, crediting the user",
+        "less than `user_receives` \u2014 use `route_v2` / `route_v2_snipe` for those.",
+        "",
+        "Scope: `legs` must be all-XDEX (`0`); Degen legs revert",
+        "`DelegatedLegUnsupported` (a Degen leg debits NATIVE from its signer,",
+        "which an SPL delegate cannot supply \u2014 supporting it would mean native",
+        "custody in the PDA, a separate design). `legs` is kept on the wire so a",
+        "future widening is wire-compatible. `remaining_accounts` = n \u00d7 the",
+        "13-account XDEX window, with: slot 0 (payer) = `delegate_authority` for",
+        "hop 0 / `vault_authority` for later hops; slot 4 (input) =",
+        "`user_input_ata` for hop 0 / the previous hop's vault ATA; slot 5",
+        "(output) = `ATA(out_mint, vault_authority, out_token_program)` \u2014 all",
+        "derived and asserted by the router, and vault ATAs are created",
+        "idempotently (`payer` funds rent) before the hop runs.",
+        "",
+        "`RouteExecuted.user` is the token-account OWNER (the follower), not the",
+        "delegate; `DelegatedRouteExecuted` additionally records the delegate and",
+        "payer."
+      ],
+      "discriminator": [
+        155,
+        193,
+        76,
+        148,
+        122,
+        221,
+        248,
+        88
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "docs": [
+            "`user_input_ata`, recipient at `user_output_ata`). Not a signer; its",
+            "ownership of the input ATA + the SPL delegation are asserted in-instruction."
+          ]
+        },
+        {
+          "name": "delegate_authority",
+          "docs": [
+            "The SPL delegate on `user_input_ata` (asserted); XDEX `payer` of hop 0."
+          ],
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Funds idempotent ATA creates (vault / user output / fee) \u2014 may equal the delegate."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault_authority",
+          "docs": [
+            "and the fee/forward transfers out of the vault ATAs."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_input_ata",
+          "docs": [
+            "delegated_amount >= initial_amount_in); hop 0 must spend exactly this account."
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_output_ata",
+          "docs": [
+            "final_out_token_program); created idempotently; receives gross \u2212 fee."
+          ],
+          "writable": true
+        },
+        {
+          "name": "fee_destination",
+          "docs": [
+            "final_out_token_program); the mandatory fee is transferred here."
+          ],
+          "writable": true
+        },
+        {
+          "name": "fee_wallet",
+          "address": "FdQ2FmAydXBe87Nm7w4MjksRqTUjahPaqjj7mVshKvNa"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "xdex_program",
+          "address": "sEsYH97wqmfnkzHedjNcw3zyJdPvUmsa9AixhS4b4fN"
+        },
+        {
+          "name": "fee_config",
+          "docs": [
+            "address (Anchor 2012); `require_not_paused` re-checks address, then owner",
+            "(2004), then reads only the `paused` byte (225)."
+          ],
+          "address": "6kfdAmUEPCQbRWpVchV6wS3K8wtd6vKgSEYvkKPAUoHC"
+        }
+      ],
+      "args": [
+        {
+          "name": "legs",
+          "type": "bytes"
+        },
+        {
+          "name": "initial_amount_in",
+          "type": "u64"
+        },
+        {
+          "name": "minimum_amount_out",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "route_v2_snipe",
+      "docs": [
+        "v0.3.0 \u2014 ONE XDEX `swap_base_input` hop with a FIXED account list (no",
+        "leg partition, no Degen / WXNT plumbing, no `remaining_accounts`), for",
+        "same-slot sniper races where every account and CU counts. The user is",
+        "the signer and swap authority exactly as in `route_v2`; the fee path is",
+        "`route_v2`'s shared helper byte-for-byte (fee BEFORE min-out, pinned",
+        "sink, hook-reject, idempotent fee-ATA create \u2014 the user funds it,",
+        "which a fresh-launch sniper needs since the fee ATA for a new mint will",
+        "not exist yet). `user_output_ata` must pre-exist (no create here).",
+        "XDEX requires `observation_state` (live-verified: omitting it is Anchor",
+        "3005, substituting it is 2012), so the 13-account cp-swap window is the",
+        "floor; this variant removes only the router's own overhead (18 accounts",
+        "vs `route_v2`'s 21 metas for one hop). Emits `RouteExecuted{hops:1}`."
+      ],
+      "discriminator": [
+        113,
+        80,
+        121,
+        177,
+        108,
+        16,
+        75,
+        20
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "docs": [
+            "Swap authority, fee signer, fee-ATA rent payer."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority"
+        },
+        {
+          "name": "amm_config"
+        },
+        {
+          "name": "pool_state",
+          "writable": true
+        },
+        {
+          "name": "user_input_ata",
+          "writable": true
+        },
+        {
+          "name": "user_output_ata",
+          "writable": true
+        },
+        {
+          "name": "input_vault",
+          "writable": true
+        },
+        {
+          "name": "output_vault",
+          "writable": true
+        },
+        {
+          "name": "input_token_program"
+        },
+        {
+          "name": "output_token_program"
+        },
+        {
+          "name": "input_mint"
+        },
+        {
+          "name": "output_mint"
+        },
+        {
+          "name": "observation_state",
+          "writable": true
+        },
+        {
+          "name": "fee_destination",
+          "docs": [
+            "output_token_program); the mandatory fee is transferred here."
+          ],
+          "writable": true
+        },
+        {
+          "name": "fee_wallet",
+          "address": "FdQ2FmAydXBe87Nm7w4MjksRqTUjahPaqjj7mVshKvNa"
+        },
+        {
+          "name": "xdex_program",
+          "address": "sEsYH97wqmfnkzHedjNcw3zyJdPvUmsa9AixhS4b4fN"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "fee_config",
+          "docs": [
+            "address (Anchor 2012); `require_not_paused` re-checks address, then owner",
+            "(2004), then reads only the `paused` byte (225)."
+          ],
+          "address": "6kfdAmUEPCQbRWpVchV6wS3K8wtd6vKgSEYvkKPAUoHC"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_in",
+          "type": "u64"
+        },
+        {
+          "name": "minimum_amount_out",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "route_v3",
+      "docs": [
+        "v0.4.0 (OpenProject #7264) \u2014 `route_v2` + an INTEGRATOR FEE: the same",
+        "engine (leg kinds, windows, exact carry, C-1 bounds, WXNT bridging),",
+        "then TWO fee transfers out of the final output ATA, both signed by the",
+        "user, atomically in this instruction:",
+        "1. the protocol fee \u2014 UNCHANGED: `ceil(gross \u00d7 25 bps)` on the GROSS",
+        "output to `ATA(out_mint, EeWE\u2026)`; computed first and never reduced",
+        "by the integrator fee (the integrator fee is never carved out of it);",
+        "2. the integrator fee \u2014 `floor(gross \u00d7 integrator_fee_bps)` on the same",
+        "gross, to `integrator_fee_destination`, which MUST equal",
+        "`ATA(out_mint, integrator_wallet, out_token_program)` (derived and",
+        "asserted \u2014 a caller cannot redirect it to a non-canonical account)",
+        "and MUST ALREADY EXIST (6046 `IntegratorFeeDestinationMissing`,",
+        "checked BEFORE any CPI): the integrator creates its own fee account",
+        "per mint (Jupiter standard); the router never creates it and the",
+        "user never pays a partner's rent. Owner + mint are read and pinned.",
+        "`minimum_amount_out` is the floor on what the user keeps AFTER BOTH fees.",
+        "`integrator_fee_bps` is `1..=MAX_INTEGRATOR_FEE_BPS` (300) \u2014 a",
+        "compile-time cap, no governance surface; `0` is rejected (use `route_v2`).",
+        "`integrator_wallet` may be any pubkey except the zero key (its ATA would",
+        "be an unrecoverable sink); it may be the user or even the protocol fee",
+        "wallet (harmless: the amount lands in that owner's own ATA).",
+        "",
+        "Fixed accounts: `route_v2`'s 8 + `fee_config` (MANDATORY pause coverage",
+        "from the first tx \u2014 no optional tail on this ix) + the two integrator",
+        "accounts; `remaining_accounts` = the leg windows EXACTLY (any trailing",
+        "account is `BadAccountCount`). Gate order: pause \u2192 args \u2192 engine.",
+        "Emits `RouteExecuted` (unchanged shape: `fee` = the protocol fee,",
+        "`user_receives` = net after both fees, `gross_out \u2212 fee \u2212 integrator ==",
+        "user_receives`) and `IntegratorFeePaid`."
+      ],
+      "discriminator": [
+        252,
+        201,
+        209,
+        228,
+        60,
+        14,
+        208,
+        145
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "docs": [
+            "Route authority + rent payer (protocol fee-ATA / WXNT-ATA idempotent creates; never the integrator's)."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "fee_destination",
+          "docs": [
+            "final_out_token_program); the mandatory protocol fee is transferred here."
+          ],
+          "writable": true
+        },
+        {
+          "name": "fee_wallet",
+          "address": "FdQ2FmAydXBe87Nm7w4MjksRqTUjahPaqjj7mVshKvNa"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "xdex_program",
+          "address": "sEsYH97wqmfnkzHedjNcw3zyJdPvUmsa9AixhS4b4fN"
+        },
+        {
+          "name": "degen_program",
+          "address": "degenDXVPhS7vgu3hcdzGA7T6dfCe6qTYyVM7npP3pc"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "fee_config",
+          "docs": [
+            "address (Anchor 2012); `require_not_paused` re-checks address, then owner",
+            "(2004), then reads only the `paused` byte (225). Mandatory on this ix."
+          ],
+          "address": "6kfdAmUEPCQbRWpVchV6wS3K8wtd6vKgSEYvkKPAUoHC"
+        },
+        {
+          "name": "integrator_fee_destination",
+          "docs": [
+            "integrator_wallet, final_out_token_program) (`WrongIntegratorFeeDestination`)",
+            "AND to already exist as that token account (`IntegratorFeeDestinationMissing`);",
+            "never created by the router; the integrator fee is transferred here."
+          ],
+          "writable": true
+        },
+        {
+          "name": "integrator_wallet",
+          "docs": [
+            "the zero key (`InvalidIntegratorWallet`); need not exist or sign."
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "legs",
+          "type": "bytes"
+        },
+        {
+          "name": "initial_amount_in",
+          "type": "u64"
+        },
+        {
+          "name": "minimum_amount_out",
+          "type": "u64"
+        },
+        {
+          "name": "integrator_fee_bps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "set_guardian",
+      "docs": [
+        "Set (or clear, with `Pubkey::default()`) the `guardian` that may PAUSE.",
+        "Authority-gated; the guardian can never unpause, migrate the authority,",
+        "or touch any other field."
+      ],
+      "discriminator": [
+        147,
+        243,
+        50,
+        121,
+        154,
+        164,
+        50,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "fee_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "guardian",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_paused",
+      "docs": [
+        "Flip `FeeConfig.paused`. PAUSE (`true`) may be signed by the `guardian`",
+        "(a low-privilege incident key \u2014 fast, no multisig round-trip) OR by the",
+        "governance `authority`; UNPAUSE (`false`) ONLY by the `authority`.",
+        "Anyone else \u2192 `Unauthorized` (6022). While paused, every route entrypoint",
+        "that carries the `fee_config` account reverts `Paused` (6042) before any",
+        "CPI; governance writes are never blocked by the pause. A pause does NOT",
+        "protect against a compromised UPGRADE authority (it can upgrade the flag",
+        "away) \u2014 that threat is only closed by moving the upgrade authority to",
+        "the multisig (plan \u00a75)."
+      ],
+      "discriminator": [
+        91,
+        60,
+        125,
+        192,
+        176,
+        225,
+        166,
+        218
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "signer": true
+        },
+        {
+          "name": "fee_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "paused",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "version",
+      "docs": [
+        "Read-only, account-less no-op that logs and returns (as return data)",
+        "the program's semantic version \u2014 ground truth for explorers, auditors and",
+        "the keeper's \"program version changed\" hook. Zero cost on the hot path."
+      ],
+      "discriminator": [
+        118,
+        65,
+        195,
+        198,
+        129,
+        216,
+        252,
+        192
+      ],
+      "accounts": [],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "FeeConfig",
+      "discriminator": [
+        143,
+        52,
+        146,
+        187,
+        219,
+        123,
+        76,
+        155
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "DelegatedRouteExecuted",
+      "discriminator": [
+        109,
+        183,
+        168,
+        45,
+        164,
+        104,
+        34,
+        243
+      ]
+    },
+    {
+      "name": "FeeAuthorityMigrated",
+      "discriminator": [
+        83,
+        227,
+        247,
+        31,
+        78,
+        155,
+        15,
+        112
+      ]
+    },
+    {
+      "name": "FeeConfigInitialized",
+      "discriminator": [
+        99,
+        232,
+        112,
+        161,
+        28,
+        61,
+        171,
+        178
+      ]
+    },
+    {
+      "name": "GuardianSet",
+      "discriminator": [
+        159,
+        49,
+        155,
+        156,
+        176,
+        88,
+        29,
+        190
+      ]
+    },
+    {
+      "name": "IntegratorFeePaid",
+      "discriminator": [
+        27,
+        222,
+        152,
+        174,
+        97,
+        233,
+        86,
+        177
+      ]
+    },
+    {
+      "name": "PauseSet",
+      "discriminator": [
+        175,
+        57,
+        198,
+        136,
+        192,
+        66,
+        204,
+        73
+      ]
+    },
+    {
+      "name": "RouteExecuted",
+      "discriminator": [
+        223,
+        139,
+        136,
+        123,
+        11,
+        101,
+        183,
+        17
+      ]
+    },
+    {
+      "name": "ThresholdChangeCommitted",
+      "discriminator": [
+        224,
+        130,
+        96,
+        145,
+        63,
+        201,
+        191,
+        176
+      ]
+    },
+    {
+      "name": "ThresholdChangeProposed",
+      "discriminator": [
+        130,
+        234,
+        247,
+        106,
+        41,
+        189,
+        46,
+        153
+      ]
+    },
+    {
+      "name": "TierWritersFinalized",
+      "discriminator": [
+        12,
+        43,
+        67,
+        106,
+        97,
+        179,
+        6,
+        58
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "BadHopCount",
+      "msg": "num_hops must be between 1 and MAX_HOPS"
+    },
+    {
+      "code": 6001,
+      "name": "BadAccountCount",
+      "msg": "remaining_accounts length must equal num_hops * 13"
+    },
+    {
+      "code": 6002,
+      "name": "ZeroAmountIn",
+      "msg": "amount_in must be greater than zero"
+    },
+    {
+      "code": 6003,
+      "name": "AuthorityNotUser",
+      "msg": "swap authority must be the transaction's user"
+    },
+    {
+      "code": 6004,
+      "name": "AuthorityNotSigner",
+      "msg": "swap authority must be a signer"
+    },
+    {
+      "code": 6005,
+      "name": "PoolNotXdex",
+      "msg": "pool account is not owned by the XDEX program"
+    },
+    {
+      "code": 6006,
+      "name": "AtaNotUser",
+      "msg": "token account is not owned by the transaction's user"
+    },
+    {
+      "code": 6007,
+      "name": "BrokenRoute",
+      "msg": "hop input does not chain from the previous hop output"
+    },
+    {
+      "code": 6008,
+      "name": "NotATokenAccount",
+      "msg": "account is not a valid SPL/Token-2022 token account"
+    },
+    {
+      "code": 6009,
+      "name": "NotAMint",
+      "msg": "account is not a valid SPL/Token-2022 mint"
+    },
+    {
+      "code": 6010,
+      "name": "MintMismatch",
+      "msg": "token account mint does not match the hop's mint account"
+    },
+    {
+      "code": 6011,
+      "name": "BadTokenProgram",
+      "msg": "token program is not SPL Token or Token-2022"
+    },
+    {
+      "code": 6012,
+      "name": "TransferHookUnsupported",
+      "msg": "output mint has a TransferHook extension (unsupported)"
+    },
+    {
+      "code": 6013,
+      "name": "NoNetOutput",
+      "msg": "route produced no net output (losing round trip)"
+    },
+    {
+      "code": 6014,
+      "name": "WrongFeeDestination",
+      "msg": "fee destination is not the fee wallet's canonical output-mint ATA"
+    },
+    {
+      "code": 6015,
+      "name": "FeeConfig",
+      "msg": "protocol fee bps exceeds the hard cap"
+    },
+    {
+      "code": 6016,
+      "name": "MathOverflow",
+      "msg": "arithmetic overflow"
+    },
+    {
+      "code": 6017,
+      "name": "SlippageExceeded",
+      "msg": "route output below minimum_amount_out (slippage)"
+    },
+    {
+      "code": 6018,
+      "name": "BadLegKind",
+      "msg": "unknown leg kind (expected 0=XDEX, 1=Degen buy, 2=Degen sell)"
+    },
+    {
+      "code": 6019,
+      "name": "NotDegenAccount",
+      "msg": "account is not owned by the Degen program"
+    },
+    {
+      "code": 6020,
+      "name": "ExpectedWxntInput",
+      "msg": "expected the WXNT mint on the XNT-hub side of this hop"
+    },
+    {
+      "code": 6021,
+      "name": "UnsupportedLegSequence",
+      "msg": "unsupported leg sequence / medium transition"
+    },
+    {
+      "code": 6022,
+      "name": "Unauthorized",
+      "msg": "caller is not the fee_config governance authority"
+    },
+    {
+      "code": 6023,
+      "name": "NotUpgradeAuthority",
+      "msg": "initializer is not the program's upgrade authority (CC-1 init gate)"
+    },
+    {
+      "code": 6024,
+      "name": "InvalidTierBps",
+      "msg": "tier_bps must be exactly [25,15,5], each in [5,25], strictly decreasing, base == PROTOCOL_FEE_BPS"
+    },
+    {
+      "code": 6025,
+      "name": "ThresholdTooLow",
+      "msg": "threshold below the in-program floor (governance may never go under the ratified value)"
+    },
+    {
+      "code": 6026,
+      "name": "RateLimited",
+      "msg": "a threshold change was committed too recently (rate-limit)"
+    },
+    {
+      "code": 6027,
+      "name": "NoPendingChange",
+      "msg": "no pending threshold change to commit"
+    },
+    {
+      "code": 6028,
+      "name": "TimelockNotElapsed",
+      "msg": "threshold-change timelock has not elapsed"
+    },
+    {
+      "code": 6029,
+      "name": "AlreadyFinalized",
+      "msg": "tier writer identity already finalized (version != 1 or identity non-zero)"
+    },
+    {
+      "code": 6030,
+      "name": "InvalidIdentity",
+      "msg": "tier writer identity must be non-zero and distinct"
+    },
+    {
+      "code": 6031,
+      "name": "InvalidAuthority",
+      "msg": "authority must be a non-default pubkey"
+    },
+    {
+      "code": 6032,
+      "name": "DelegatedLegUnsupported",
+      "msg": "route_v2_delegated supports XDEX legs only (leg kind 0)"
+    },
+    {
+      "code": 6033,
+      "name": "NotDelegate",
+      "msg": "delegate_authority is not the SPL delegate on user_input_ata"
+    },
+    {
+      "code": 6034,
+      "name": "InsufficientDelegation",
+      "msg": "delegated_amount on user_input_ata is below initial_amount_in"
+    },
+    {
+      "code": 6035,
+      "name": "BadHopAuthority",
+      "msg": "hop authority slot must be the delegate (hop 0) or the router vault authority (later hops)"
+    },
+    {
+      "code": 6036,
+      "name": "WrongVaultAta",
+      "msg": "hop output is not the router vault ATA for the hop's output mint"
+    },
+    {
+      "code": 6037,
+      "name": "WrongUserDestination",
+      "msg": "user_output_ata is not the user's canonical output-mint ATA"
+    },
+    {
+      "code": 6038,
+      "name": "VaultNotDrained",
+      "msg": "router vault ATA not empty at exit"
+    },
+    {
+      "code": 6039,
+      "name": "TransferFeeUnsupported",
+      "msg": "route_v2_delegated does not support transfer-fee output mints (use route_v2)"
+    },
+    {
+      "code": 6040,
+      "name": "InputDebitMismatch",
+      "msg": "input account debit does not equal the hop's amount_in (C-1 input-debit invariant)"
+    },
+    {
+      "code": 6041,
+      "name": "BadLegsLength",
+      "msg": "legs length prefix exceeds the instruction data (A-7)"
+    },
+    {
+      "code": 6042,
+      "name": "Paused",
+      "msg": "router is paused (fee_config.paused)"
+    },
+    {
+      "code": 6043,
+      "name": "BadIntegratorFeeBps",
+      "msg": "integrator_fee_bps must be between 1 and MAX_INTEGRATOR_FEE_BPS (300)"
+    },
+    {
+      "code": 6044,
+      "name": "WrongIntegratorFeeDestination",
+      "msg": "integrator_fee_destination is not the integrator wallet's canonical output-mint ATA"
+    },
+    {
+      "code": 6045,
+      "name": "InvalidIntegratorWallet",
+      "msg": "integrator_wallet must be a non-default pubkey"
+    },
+    {
+      "code": 6046,
+      "name": "IntegratorFeeDestinationMissing",
+      "msg": "integrator_fee_destination does not exist \u2014 the integrator must create its ATA for the output mint first"
+    }
+  ],
+  "types": [
+    {
+      "name": "DelegatedRouteExecuted",
+      "docs": [
+        "v0.3.0 \u2014 companion to `RouteExecuted` for delegated routes: who acted",
+        "(`delegate`), who paid rent (`payer`), for whom (`user` = the token-account",
+        "owner, the same value `RouteExecuted.user` carries) and on which mints."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "delegate",
+            "type": "pubkey"
+          },
+          {
+            "name": "payer",
+            "type": "pubkey"
+          },
+          {
+            "name": "input_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "output_mint",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeAuthorityMigrated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeConfig",
+      "docs": [
+        "The single global fee-config account (spec \u00a74.1 layout, version + reserved",
+        "per WP #6707 \u00a72.2). PINNED OFFSETS \u2014 APPEND-ONLY (byte offsets incl. the",
+        "8-byte Anchor discriminator):",
+        "",
+        "```text",
+        "0   disc[8]                 (sha256(\"account:FeeConfig\")[..8])",
+        "8   version: u8             (1 = init, 2 = tier writers finalized)",
+        "9   bump: u8",
+        "10   forti_mint: Pubkey      \u2510 IMMUTABLE identity block (R4):",
+        "42   sforti_mint: Pubkey     \u2502 zero at init, written ONCE by",
+        "74   sforti_program: Pubkey  \u2502 finalize_tier_writers (version 1\u21922),",
+        "106   ve_program: Pubkey      \u2518 then NO mutation path exists",
+        "138   tier_bps: [u16;3]       = [25,15,5] \u2014 IMMUTABLE, NO mutation ix exists",
+        "144   streak_n: u8            IMMUTABLE",
+        "145   holder_threshold: u64   \u2510 tunable: floors + rate-limit + timelock",
+        "153   locker_threshold: u64   \u2518",
+        "161   authority: Pubkey       governance signer (multisig \u2192 execute PDA)",
+        "193   last_change_ts: i64     rate-limit anchor (init / last commit)",
+        "201   pending_holder: u64     \u2510 staged change (0 = none)",
+        "209   pending_locker: u64     \u2502",
+        "217   pending_effective_ts: i64 \u2518 commit only when now >= this",
+        "225   paused: u8              v0.3.1 (B-M2): 1 = every route ix reverts 6042",
+        "226   guardian: Pubkey        v0.3.1: may PAUSE (not unpause); zero = none",
+        "258   reserved: [u8; 254]     zero; future fields carve from the front",
+        "512   (end)",
+        "```"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "forti_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "sforti_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "sforti_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "ve_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "tier_bps",
+            "type": {
+              "array": [
+                "u16",
+                3
+              ]
+            }
+          },
+          {
+            "name": "streak_n",
+            "type": "u8"
+          },
+          {
+            "name": "holder_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "locker_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "last_change_ts",
+            "type": "i64"
+          },
+          {
+            "name": "pending_holder",
+            "type": "u64"
+          },
+          {
+            "name": "pending_locker",
+            "type": "u64"
+          },
+          {
+            "name": "pending_effective_ts",
+            "type": "i64"
+          },
+          {
+            "name": "paused",
+            "type": "u8"
+          },
+          {
+            "name": "guardian",
+            "type": "pubkey"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                254
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeConfigInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "holder_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "locker_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "tier_bps",
+            "type": {
+              "array": [
+                "u16",
+                3
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "GuardianSet",
+      "docs": [
+        "v0.3.1 \u2014 emitted by `set_guardian`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old_guardian",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_guardian",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IntegratorFeePaid",
+      "docs": [
+        "v0.4.0 \u2014 emitted by `route_v3` next to the unchanged `RouteExecuted`:",
+        "the integrator sink and the amount that landed there (`floor(gross \u00d7 bps)`;",
+        "may be 0 for dust). `RouteExecuted.gross_out \u2212 fee \u2212 amount == user_receives`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "integrator_wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "integrator_fee_destination",
+            "type": "pubkey"
+          },
+          {
+            "name": "bps",
+            "type": "u16"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PauseSet",
+      "docs": [
+        "v0.3.1 \u2014 emitted by `set_paused`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paused",
+            "type": "bool"
+          },
+          {
+            "name": "by",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RouteExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "hops",
+            "type": "u8"
+          },
+          {
+            "name": "amount_in",
+            "type": "u64"
+          },
+          {
+            "name": "gross_out",
+            "type": "u64"
+          },
+          {
+            "name": "fee",
+            "type": "u64"
+          },
+          {
+            "name": "user_receives",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ThresholdChangeCommitted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "holder_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "locker_threshold",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ThresholdChangeProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_holder",
+            "type": "u64"
+          },
+          {
+            "name": "new_locker",
+            "type": "u64"
+          },
+          {
+            "name": "effective_ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TierWritersFinalized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "forti_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "sforti_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "sforti_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "ve_program",
+            "type": "pubkey"
+          }
+        ]
+      }
+    }
+  ]
+}

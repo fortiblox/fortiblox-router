@@ -1,0 +1,9 @@
+/target
+node_modules
+test-ledger
+.anchor
+*.log
+target/deploy/fortiblox_router-keypair.json
+package-lock.json
+
+tests/mock-amm/target

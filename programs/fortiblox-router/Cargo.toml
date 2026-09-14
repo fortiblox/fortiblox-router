@@ -1,0 +1,43 @@
+[package]
+name = "fortiblox-router"
+version = "0.4.3"
+description = "FortiBlox Router: non-custodial atomic multi-hop route executor on X1"
+edition = "2021"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "fortiblox_router"
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = [
+    'cfg(feature, values("anchor-debug", "custom-heap", "custom-panic"))',
+] }
+
+[features]
+# v0.3.1 (audit A-7): the Anchor-generated entrypoint is replaced by a guarded one
+# (see `guarded_entrypoint` in lib.rs); `guarded-entrypoint` implies `no-entrypoint`
+# so exactly one `entrypoint` symbol exists. CPI consumers use `cpi` (no entrypoint
+# at all) — they must also disable default features.
+default = ["guarded-entrypoint"]
+guarded-entrypoint = ["no-entrypoint"]
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = "1.1.2"
+anchor-spl = "1.1.2"
+solana-security-txt = "1.1.1"
+
+[dev-dependencies]
+litesvm = "0.15.2"
+solana-account = "4"
+solana-instruction = "3"
+solana-keypair = "3"
+solana-message = "4"
+solana-signer = "3"
+solana-system-interface = "3"
+solana-transaction = "4"
